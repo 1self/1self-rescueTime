@@ -2,7 +2,6 @@ require 'sinatra'
 require "sinatra/reloader"
 require 'pg'
 require 'byebug'
-require 'rescue_time_client'
 
 require_relative 'defaults'
 require_relative 'lib/Oneself'
@@ -23,7 +22,9 @@ get '/login' do
   puts "Redirecting #{params[:username]} to login."
 
   scopes = ["time_data","category_data","productivity_data","alert_data","highlight_data"]
-  auth_url = Defaults::RescueTimeClient.get_auth_url(scopes)
+
+  rt_helper = RescueTimeHelper.new
+  auth_url = rt_helper.get_auth_url(scopes)
 
   redirect auth_url
 end
@@ -53,7 +54,8 @@ get '/oauthredirect' do
   begin
     code = params[:code]
 
-    token = Defaults::RescueTimeClient.get_token_from_code(code)
+    rt_helper = RescueTimeHelper.new
+    token = rt_helper.get_auth_token(code)
     oneself_username = session['oneselfUsername']
 
     conn = PG::Connection.open(:dbname => 'rescue_time')
@@ -87,7 +89,8 @@ def start_sync(oneself_username, stream)
   last_id = result[0]["last_sync_id"]
 
   puts "Fetching events for #{username}"
-  rescuetime_helper = RescueTimeHelper.new(auth_token)
+  rt_helper = RescueTimeHelper.new
+  rt_helper.set_token(auth_token)
 
   rescue_time_events, last_id = rescuetime_helper.get_events(last_id)
 

@@ -1,10 +1,26 @@
+require 'rescue_time_client'
+
 class RescueTimeHelper
-  def initialize(access_token)
-    Defaults::RescueTimeClient.set_token(access_token)
+  def initialize
+    @client = RescueTime::Client.new(Defaults::RESCUE_TIME_CLIENT_ID, 
+                                     Defaults::RESCUE_TIME_CLIENT_SECRET, 
+                                     Defaults::RESCUE_TIME_CALLBACK_URL)
+  end
+
+  def get_auth_url(scopes)
+    @client.get_auth_url(scopes)
+  end
+
+  def get_auth_token(code)
+    @client.get_token_from_code(code)
+  end
+
+  def set_token(access_token)
+    @client.set_token(access_token)
   end
   
   def get_events(from_id)
-    rescuetime_events = Defaults::RescueTimeClient.fetch_daily_summary_feed
+    rescuetime_events = @client.fetch_daily_summary_feed
 
     transform_to_oneself_events(rescuetime_events, from_id)
   end
