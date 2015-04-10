@@ -92,7 +92,7 @@ def start_sync(oneself_username, stream)
   rt_helper = RescueTimeHelper.new
   rt_helper.set_token(auth_token)
 
-  rescue_time_events, last_id = rescuetime_helper.get_events(last_id)
+  rescue_time_events, last_id = rt_helper.get_events(last_id)
 
   all_events = rescue_time_events + Oneself::Event.sync("complete")
 
