@@ -20,6 +20,12 @@ module Defaults
   ONESELF_SEND_EVENTS_ENDPOINT = "/v1/streams/%s/events/batch"
   ONESELF_APP_ID = from_file("oneself_app_id.txt")
   ONESELF_APP_SECRET = from_file("oneself_app_secret.txt")
+
+
+  RescueTimeClient = RescueTime::Client.new(RESCUE_TIME_CLIENT_ID, 
+                                            RESCUE_TIME_CLIENT_SECRET, 
+                                            RESCUE_TIME_CALLBACK_URL)
+
 end
 
 
@@ -31,5 +37,3 @@ configure do
   set :logging, true
   set :server, 'webrick'
 end
-
-rescue_time_client = RescueTime::Client.new(RESCUE_TIME_CLIENT_ID, RESCUE_TIME_CLIENT_SECRET, RESCUE_TIME_CALLBACK_URL)

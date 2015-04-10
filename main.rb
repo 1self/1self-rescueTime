@@ -23,7 +23,7 @@ get '/login' do
   puts "Redirecting #{params[:username]} to login."
 
   scopes = ["time_data","category_data","productivity_data","alert_data","highlight_data"]
-  auth_url = rescue_time_client.get_auth_url(scopes)
+  auth_url = Defaults::RescueTimeClient.get_auth_url(scopes)
 
   redirect auth_url
 end
@@ -53,12 +53,11 @@ get '/oauthredirect' do
   begin
     code = params[:code]
 
-    token = rescue_time_client.get_token_from_code(code)
+    token = Defaults::RescueTimeClient.get_token_from_code(code)
     oneself_username = session['oneselfUsername']
 
-    last_sync_time = (DateTime.now << 1).to_time.to_i
-    conn = PG::Connection.open(:dbname => 'dev')
-    conn.exec_params('INSERT INTO USERS (oneself_username, access_token, last_sync_time) VALUES ($1, $2, $3)', [username, token.token, last_sync_time])
+    conn = PG::Connection.open(:dbname => 'rescue_time')
+    conn.exec_params('INSERT INTO USERS (oneself_username, access_token, last_sync_id) VALUES ($1, $2, $3)', [oneself_username, token.token, 0])
     
     stream = Oneself::Stream.register(oneself_username,
                                       session['registrationToken'],
@@ -80,22 +79,23 @@ def start_sync(oneself_username, stream)
   Oneself::Event.send_via_api(sync_start_event, stream)
   puts "Sent sync start event successfully"
 
-  conn = PG::Connection.open(:dbname => 'dev')
+  conn = PG::Connection.open(:dbname => 'rescue_time')
   result = conn.exec("SELECT * FROM USERS WHERE oneself_username = '#{oneself_username}'")
   
   auth_token = result[0]["access_token"]
   username = result[0]["oneself_username"]
-  since_time = result[0]["last_sync_time"]
+  last_id = result[0]["last_sync_id"]
 
   puts "Fetching events for #{username}"
   rescuetime_helper = RescueTimeHelper.new(auth_token)
 
-  all_events = rescuetime_helper.get_events(since_time) +
-    Oneself::Event.sync("complete")
+  rescue_time_events, last_id = rescuetime_helper.get_events(last_id)
+
+  all_events = rescue_time_events + Oneself::Event.sync("complete")
 
   Oneself::Event.send_via_api(all_events, stream)
 
-  result = conn.exec("UPDATE USERS SET LAST_SYNC_TIME = #{Time.now.to_i} WHERE oneself_username = '#{oneself_username}'")
+  result = conn.exec("UPDATE USERS SET LAST_SYNC_ID = #{last_id} WHERE oneself_username = '#{oneself_username}'")
   puts "Sync complete for #{username}"
 
 rescue => e

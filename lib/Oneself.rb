@@ -38,24 +38,15 @@ module Oneself
     extend self
 
     def transform_rescuetime_event(evt)
-      evt_type = evt["type"].downcase
+      dateTime = Date.parse(evt["date"]).to_time.utc.iso8601
+      evt.delete("id")
+      evt.delete("date")
 
       { 
-        dateTime: evt["start_date"],
+        dateTime: dateTime,
         objectTags: ['self'],
-        actionTags: ['exercise', evt_type],
-        properties: {
-          distance: evt["distance"].to_i,
-          name: evt["name"],
-          moving_time: evt["moving_time"],
-          elapsed_time: evt["elapsed_time"],
-          total_elevation_gain: evt["total_elevation_gain"],
-          city: evt["location_city"],
-          state: evt["location_state"],
-          country: evt["location_country"],
-          average_speed: evt["average_speed"],
-          max_speed: evt["max_speed"]
-        }
+        actionTags: ['productivity'],
+        properties: evt
       }
     end
 
