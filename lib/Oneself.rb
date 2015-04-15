@@ -40,7 +40,8 @@ module Oneself
     extend self
 
     def transform_rescuetime_event(evt)
-      dateTime = Date.parse(evt["date"]).to_time.utc.iso8601
+      date = Date.parse(evt["date"])
+      dateTime = Time.parse(date + " 23:59:59").utc.iso8601
       
       props = {}
       props["productivity-pulse"] = evt["productivity_pulse"]
