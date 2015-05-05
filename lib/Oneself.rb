@@ -44,16 +44,12 @@ module Oneself
       dateTime = Time.parse(date + " 23:59:59").utc.iso8601
       
       props = {}
-      props["productivity-pulse"] = evt["productivity_pulse"]
+      props["productivity-percent"] = evt["productivity_pulse"]
       props["very-productive-percent"] = evt["very_productive_percentage"]
       props["productive-percent"] = evt["productive_percentage"]
       props["neutral-percent"] = evt["neutral_percentage"]
       props["distracting-percent"] = evt["distracting_percentage"]
       props["very-distracting-percent"] = evt["very_distracting_percentage"]
-
-      props["all-productive-percent"] = evt["all_productive_percentage"]
-      props["all-distracting-percent"] = evt["all_distracting_percentage"]
-      props["business-percent"] = evt["business_percentage"]
 
       props["all-productive-percent"] = evt["all_productive_percentage"]
       props["all-distracting-percent"] = evt["all_distracting_percentage"]
@@ -71,35 +67,36 @@ module Oneself
       props["shopping-percent"] = evt["shopping_percentage"]
       props["utilities-percent"] = evt["utilities_percentage"]
 
-      props["total-duration"] = Util.hours_to_milli_seconds(evt["total_hours"])
-      props["very-productivity-duration"] = Util.hours_to_milli_seconds(evt["very_productivity_hours"])
-      props["all-productivity-duration"] = Util.hours_to_milli_seconds(evt["all_productivity_hours"])
-      props["productive-duration"] = Util.hours_to_milli_seconds(evt["productive_hours"])
-      props["neutral-duration"] = Util.hours_to_milli_seconds(evt["neutral_hours"])
-      props["distracting-duration"] = Util.hours_to_milli_seconds(evt["distracting_hours"])
+      props["total-duration"] = Util.hours_to_  seconds(evt["total_hours"])
+      props["very-productivity-duration"] = Util.hours_to_seconds(evt["very_productivity_hours"])
+      props["all-productivity-duration"] = Util.hours_to_seconds(evt["all_productivity_hours"])
+      props["productive-duration"] = Util.hours_to_seconds(evt["productive_hours"])
+      props["neutral-duration"] = Util.hours_to_seconds(evt["neutral_hours"])
+      props["distracting-duration"] = Util.hours_to_seconds(evt["distracting_hours"])
 
-      props["all-distracting-duration"] = Util.hours_to_milli_seconds(evt["all_distracting_hours"])
-      props["uncategorized-duration"] = Util.hours_to_milli_seconds(evt["uncategorized_hours"])
-      props["very-distracting-duration"] = Util.hours_to_milli_seconds(evt["very_distracting_hours"])
-      props["business-duration"] = Util.hours_to_milli_seconds(evt["business_hours"])
-      props["communication-and-scheduling-duration"] = Util.hours_to_milli_seconds(evt["communication_and_scheduling_hours"])
-      props["social-networking-duration"] = Util.hours_to_milli_seconds(evt["social_networking_hours"])
+      props["all-distracting-duration"] = Util.hours_to_seconds(evt["all_distracting_hours"])
+      props["uncategorized-duration"] = Util.hours_to_seconds(evt["uncategorized_hours"])
+      props["very-distracting-duration"] = Util.hours_to_seconds(evt["very_distracting_hours"])
+      props["business-duration"] = Util.hours_to_seconds(evt["business_hours"])
+      props["communication-and-scheduling-duration"] = Util.hours_to_seconds(evt["communication_and_scheduling_hours"])
+      props["social-networking-duration"] = Util.hours_to_seconds(evt["social_networking_hours"])
       
-      props["design-and-composition-duration"] = Util.hours_to_milli_seconds(evt["design_and_composition_hours"])
-      props["entertainment-duration"] = Util.hours_to_milli_seconds(evt["entertainment_hours"])
+      props["design-and-composition-duration"] = Util.hours_to_seconds(evt["design_and_composition_hours"])
+      props["entertainment-duration"] = Util.hours_to_seconds(evt["entertainment_hours"])
 
-      props["news-duration"] = Util.hours_to_milli_seconds(evt["news_hours"])
-      props["software-development-duration"] = Util.hours_to_milli_seconds(evt["software_development_hours"])
+      props["news-duration"] = Util.hours_to_seconds(evt["news_hours"])
+      props["software-development-duration"] = Util.hours_to_seconds(evt["software_development_hours"])
 
-      props["reference-and-learning-duration"] = Util.hours_to_milli_seconds(evt["reference_and_learning_hours"])
-      props["shopping-duration"] = Util.hours_to_milli_seconds(evt["shopping_hours"])
-      props["utilities-duration"] = Util.hours_to_milli_seconds(evt["utilities_hours"])
+      props["reference-and-learning-duration"] = Util.hours_to_seconds(evt["reference_and_learning_hours"])
+      props["shopping-duration"] = Util.hours_to_seconds(evt["shopping_hours"])
+      props["utilities-duration"] = Util.hours_to_seconds(evt["utilities_hours"])
       
 
       { 
         dateTime: dateTime,
-        objectTags: ['computer'],
+        objectTags: ['desktop', 'computer'],
         actionTags: ['use'],
+        source: "1self-rescuetime",
         properties: props
       }
     end
@@ -107,10 +104,10 @@ module Oneself
     def sync(type)
       [
        { dateTime: Time.now.utc.iso8601,
-         objectTags: ['sync'],
+         objectTags: ['1self', 'integration', 'sync'],
          actionTags: [type],
+         source: '1self-rescuetime',
          properties: {
-           source: '1self-rescuetime'
          }
        }
       ]
