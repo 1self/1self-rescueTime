@@ -3,13 +3,17 @@ require 'time'
 require_relative 'util'
 
 
+
 module Oneself
 
   module Stream
     extend self
 
+    @@logger = Logger.new(STDOUT)
+
     def register(username, reg_token, oneself_uniq_name)
       callback_url = Defaults::HOST_URL + Defaults::SYNC_ENDPOINT + "?oneself_user=#{oneself_uniq_name}&streamid={{streamid}}"
+      @@logger.info('callback_url: ' + callback_url)
       app_id = Defaults::ONESELF_APP_ID
       app_secret = Defaults::ONESELF_APP_SECRET
 
@@ -22,6 +26,11 @@ module Oneself
       stream_register_url = Defaults::ONESELF_API_HOST + 
         sprintf(Defaults::ONESELF_STREAM_REGISTER_ENDPOINT, username)
 
+      @@logger.info('stream_register_url: ' + stream_register_url)
+      @@logger.info('reg_token: ' + reg_token)
+      @@logger.info('appid: ' + app_id)
+      @@logger.info('app_secret: ' + app_secret)
+
       resp = RestClient::Request.execute(
                                          method: :post,
                                          payload: {:callbackUrl => callback_url}.to_json,
@@ -31,13 +40,15 @@ module Oneself
                                          )
 
       puts "Successfully registered stream for #{username}"
-
+      @@logger.info(resp)
       JSON.parse(resp)
     end
   end
 
   module Event
     extend self
+
+    @@logger = Logger.new(STDOUT)
 
     def transform_rescuetime_event(evt)
       date = Date.parse(evt["date"]).to_s
@@ -67,7 +78,7 @@ module Oneself
       props["shopping-percent"] = evt["shopping_percentage"]
       props["utilities-percent"] = evt["utilities_percentage"]
 
-      props["total-duration"] = Util.hours_to_  seconds(evt["total_hours"])
+      props["total-duration"] = Util.hours_to_seconds(evt["total_hours"])
       props["very-productivity-duration"] = Util.hours_to_seconds(evt["very_productivity_hours"])
       props["all-productivity-duration"] = Util.hours_to_seconds(evt["all_productivity_hours"])
       props["productive-duration"] = Util.hours_to_seconds(evt["productive_hours"])
@@ -121,6 +132,8 @@ module Oneself
 
       puts stream
       puts url
+
+      @@logger.info(events.to_json)
 
       resp = RestClient.post(url, events.to_json, accept: :json, content_type: :json, Authorization: stream["writeToken"])
       

@@ -1,6 +1,6 @@
 GIT
-  remote: https://github.com/devaroop/rescue_time_client.git
-  revision: f9f461bd6902b7749d18a24cbb26d2424bb780bf
+  remote: https://github.com/1self/rescue_time_client
+  revision: df3e5c3ccfc311bc8a2877c529e598bf2005eafa
   specs:
     rescue_time_client (0.0.1)
       oauth2
@@ -18,7 +18,7 @@ GEM
       multipart-post (>= 1.2, < 3)
     http-cookie (1.0.2)
       domain_name (~> 0.5)
-    jwt (1.4.1)
+    jwt (1.5.0)
     mime-types (2.4.3)
     multi_json (1.11.0)
     multi_xml (0.5.5)
