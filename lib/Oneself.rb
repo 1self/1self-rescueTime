@@ -137,7 +137,9 @@ module Oneself
 
       resp = RestClient.post(url, events.to_json, accept: :json, content_type: :json, Authorization: stream["writeToken"])
       
-      parsed_resp = JSON.parse(resp)
+      if resp != ''
+        parsed_resp = JSON.parse(resp)
+      end
       puts "Response after sending events: #{parsed_resp}"
 
       parsed_resp

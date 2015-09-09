@@ -9,6 +9,8 @@ require_relative 'lib/RescueTimeHelper'
 
 logger = Logger.new(STDOUT)
 
+logger.info('running on port ' + ENV['PORT'])
+
 get '/' do
   "There's nothing here."
 end
@@ -114,13 +116,22 @@ def start_sync(oneself_username, stream)
 
   rescue_time_events, last_id = rt_helper.get_events(last_id)
 
+  puts 'rescue_time_events is'
+  puts rescue_time_events
+
+  if rescue_time_events == nil
+    rescue_time_events = []
+  end
+    
   all_events = rescue_time_events + Oneself::Event.sync("complete")
-
+    
   Oneself::Event.send_via_api(all_events, stream)
-
-  result = conn.exec("UPDATE USERS SET LAST_SYNC_ID = #{last_id} WHERE oneself_username = '#{oneself_username}'")
+  if last_id != nil
+    result = conn.exec("UPDATE USERS SET LAST_SYNC_ID = #{last_id} WHERE oneself_username = '#{oneself_username}'")
+  end
   puts "Sync complete for #{username}"
 
 rescue => e
   puts "Some error for: #{oneself_username}. Error: #{e}"
+  throw e
 end

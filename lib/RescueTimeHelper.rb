@@ -1,6 +1,9 @@
 require 'rescue_time_client'
+logger = Logger.new(STDOUT)
 
 class RescueTimeHelper
+  @@logger = Logger.new(STDOUT)
+
   def initialize
     @client = RescueTime::Client.new(Defaults::RESCUE_TIME_CLIENT_ID, 
                                      Defaults::RESCUE_TIME_CLIENT_SECRET, 
@@ -20,18 +23,29 @@ class RescueTimeHelper
   end
   
   def get_events(from_id)
+    @@logger.info('getting events')
     rescuetime_events = @client.fetch_daily_summary_feed
 
+    @@logger.info 'transforming events, '
+    @@logger.info rescuetime_events.inspect;
     transform_to_oneself_events(rescuetime_events, from_id)
   end
 
   private
   
   def transform_to_oneself_events(rescuetime_events, from_id)
+    if rescuetime_events == []
+      return []
+    end
+    
     oneself_events = []
     latest_id = rescuetime_events.first["id"]
 
+    @@logger.info 'going through events'
+    @@logger.info rescuetime_events.inspect
     rescuetime_events.each do |evt|
+      @@logger.info 'processing event'
+      @@logger.info evt
       if from_id.to_i == evt["id"]
         break
       else
