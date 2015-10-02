@@ -84,7 +84,7 @@ get '/oauthredirect' do
     logger.info('redirecting back to integrations')
     redirect(Defaults::ONESELF_API_HOST + '/integrations')
   rescue => e
-    puts "Error while rescuetime callback #{e}"
+    logger.error("Error while rescuetime callback #{e}")
     redirect(Defaults::ONESELF_API_HOST + '/integrations')
   end
 end
