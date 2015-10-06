@@ -23,7 +23,9 @@ get '/login' do
 
   session['oneselfUsername'] = params[:username]
   session['registrationToken'] = params[:token]
+  session['redirectUri'] = params[:redirect_uri]
   puts "Redirecting #{params[:username]} to login."
+  puts "Redirect url is #{params[:redirectUri]}"
 
   scopes = ["time_data","category_data","productivity_data","alert_data","highlight_data"]
 
@@ -82,10 +84,10 @@ get '/oauthredirect' do
     start_sync(oneself_username, stream)
 
     logger.info('redirecting back to integrations')
-    redirect(Defaults::ONESELF_API_HOST + '/integrations')
+    redirect(session['redirectUri'])
   rescue => e
     logger.error("Error while rescuetime callback #{e}")
-    redirect(Defaults::ONESELF_API_HOST + '/integrations')
+    redirect(session['redirectUri'])
   end
 end
 
