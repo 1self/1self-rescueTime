@@ -84,10 +84,10 @@ get '/oauthredirect' do
     start_sync(oneself_username, stream)
 
     logger.info('redirecting back to integrations')
-    redirect(session['redirectUri'])
+    redirect(session['redirectUri'] + '?success=true')
   rescue => e
     logger.error("Error while rescuetime callback #{e}")
-    redirect(session['redirectUri'])
+    redirect(session['redirectUri'] + '?success=false&error=server_error')
   end
 end
 
