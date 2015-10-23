@@ -6,8 +6,14 @@ require 'byebug'
 require_relative 'defaults'
 require_relative 'lib/Oneself'
 require_relative 'lib/RescueTimeHelper'
+require_relative 'logging'
 
-logger = Logger.new(STDOUT)
+logger = Logging::MultiLogger.new(ENV['LOGGINGDIR'] + '/rescuetime.log')
+logger.fatal("fatal messages logged here")
+logger.error("error messages logged here")
+logger.warn("warn messages logged here")
+logger.info("info messages logged here")
+logger.debug("debug messages logged here")
 
 logger.info('running on port ' + ENV['PORT'])
 
@@ -15,33 +21,45 @@ get '/' do
   "There's nothing here."
 end
 
+loginLogger = Logging::ScopedLogger.new("login", logger)
+
 get '/login' do
   if params[:username].nil? || params[:token].nil?
     status 404
+    loginLogger.error("request was made without required parameters")
     body 'Oneself parameters not found' and return
   end
 
+  usernameLogger = Logging::ScopedLogger.new(params[:username], loginLogger);
   session['oneselfUsername'] = params[:username]
   session['registrationToken'] = params[:token]
   session['redirectUri'] = params[:redirect_uri]
-  puts "Redirecting #{params[:username]} to login."
-  puts "Redirect url is #{params[:redirectUri]}"
+  usernameLogger.info("Redirecting to login.")
+  usernameLogger.debug("Redirect url is #{params[:redirect_uri]}, token is #{params[:token][0, 2]}")
 
   scopes = ["time_data","category_data","productivity_data","alert_data","highlight_data"]
 
   rt_helper = RescueTimeHelper.new
   auth_url = rt_helper.get_auth_url(scopes)
 
+  usernameLogger.debug("Authing on #{auth_url}")
   redirect auth_url
 end
 
+syncLogger = Logging::ScopedLogger.new("sync", logger)
+
 get '/sync' do
   user = params[:oneself_user]
+  userLogger = Logging::ScopedLogger.new(user, syncLogger)
+  userLogger.info('requested')
   streamid = params[:streamid]
   write_token = request.env['HTTP_AUTHORIZATION']
 
+  userLogger.debug("streamid is #{streamid}, write token is #{write_token[0, 2]}")
+
   if user.nil? || streamid.nil? || write_token.nil?
     status 404
+    userLogger.error("required parameters not found")
     body 'Oneself sync parameters not found' and return
   end
 
@@ -50,55 +68,60 @@ get '/sync' do
     "writeToken" => write_token
   }
 
-  start_sync(user, stream)
+  userLogger.debug("starting sync")
+  start_sync(user, stream, userLogger)
+  userLogger.info("finished sync")
 
   "Sync request complete"
 end
 
+oauthredirectLogger = Logging::ScopedLogger.new("oauthredirect", logger)
 
 get '/oauthredirect' do
   begin
-    logger.info('starting oauthredirect')
+    oneself_username = session['oneselfUsername']
+    userLogger = Logging::ScopedLogger.new(oneself_username, oauthredirectLogger)
+    userLogger.info("request made")
     code = params[:code]
+
+    userLogger.debug("received auth code #{code}")
 
     rt_helper = RescueTimeHelper.new
     token = rt_helper.get_auth_token(code)
-    oneself_username = session['oneselfUsername']
 
-  conn = PG::Connection.open(dbname: Defaults::RESCUE_TIME_DB_NAME,
+    conn = PG::Connection.open(dbname: Defaults::RESCUE_TIME_DB_NAME,
                               host: Defaults::RESCUE_TIME_DB_HOST,
                               port: Defaults::RESCUE_TIME_DB_PORT.to_i,
                               user: Defaults::RESCUE_TIME_DB_USER,
                               password: Defaults::RESCUE_TIME_DB_PASSWORD)
     conn.exec_params('INSERT INTO USERS (oneself_username, access_token, last_sync_id) VALUES ($1, $2, $3)', [oneself_username, token.token, 0])
-    logger.info('user state stored in db')  
-    logger.info('oneself_username: ' + oneself_username)
-    logger.info('registrationToken: ' + session['registrationToken'])
+    userLogger.debug('user state stored in db')  
+    userLogger.debug("registrationToken is #{session['registrationToken'][0, 2]}")
     stream = Oneself::Stream.register(oneself_username,
                                       session['registrationToken'],
                                       oneself_username #no uniq field from rescuetime available :(
                                       )
-    logger.info('stream registered')
-    logger.info(stream)
-    logger.info('starting sync')
-    start_sync(oneself_username, stream)
-
-    logger.info('redirecting back to integrations')
+    userLogger.info('stream registered')
+#    userLogger.info(stream)
+    userLogger.debug('starting sync')
+    start_sync(oneself_username, stream, userLogger)
+    userLogger.info("sync complete, redirecting back to integrations using #{session['redirect_uri']}")
     redirect(session['redirectUri'] + '?success=true')
   rescue => e
-    logger.error("Error while rescuetime callback #{e}")
+    userLogger.error("Error while rescuetime callback #{e}")
     redirect(session['redirectUri'] + '?success=false&error=server_error')
   end
 end
 
 
-def start_sync(oneself_username, stream)
+def start_sync(oneself_username, stream, logger)
   sync_start_event = Oneself::Event.sync("start")
+  logger.debug("sending sync start event #{sync_start_event}")
   Oneself::Event.send_via_api(sync_start_event, stream)
-  puts "Sent sync start event successfully"
+  logger.info("Sent sync start event successfully")
 
 
-
+  logger.debug("getting users details from the database")
   conn = PG::Connection.open(dbname: Defaults::RESCUE_TIME_DB_NAME,
                               host: Defaults::RESCUE_TIME_DB_HOST,
                               port: Defaults::RESCUE_TIME_DB_PORT.to_i,
@@ -108,32 +131,36 @@ def start_sync(oneself_username, stream)
 
   result = conn.exec("SELECT * FROM USERS WHERE oneself_username = '#{oneself_username}'")
   
-  auth_token = result[0]["access_token"]
+  access_token = result[0]["access_token"]
   username = result[0]["oneself_username"]
   last_id = result[0]["last_sync_id"]
 
-  puts "Fetching events for #{username}"
+  logger.debug("access_token is #{access_token[0, 2]}, username is #{username[0, 2]}, last_id is #{last_id}")
+
+  logger.debug("fectching events")
   rt_helper = RescueTimeHelper.new
-  rt_helper.set_token(auth_token)
+  rt_helper.set_token(access_token)
 
-  rescue_time_events, last_id = rt_helper.get_events(last_id)
+  rescue_time_events, new_last_id = rt_helper.get_events(last_id)
 
-  puts 'rescue_time_events is'
-  puts rescue_time_events
+  logger.debug("events retrieved, time of last event from api is #{new_last_id}")
+  logger.debug("rescue_time_events is #{rescue_time_events}")
 
   if rescue_time_events == nil
     rescue_time_events = []
   end
     
+  logger.debug("adding the complete event")
   all_events = rescue_time_events + Oneself::Event.sync("complete")
     
+  logger.debug("sending the events to the api")
   Oneself::Event.send_via_api(all_events, stream)
-  if last_id != nil
-    result = conn.exec("UPDATE USERS SET LAST_SYNC_ID = #{last_id} WHERE oneself_username = '#{oneself_username}'")
+  if new_last_id != nil
+    result = conn.exec("UPDATE USERS SET LAST_SYNC_ID = #{new_last_id} WHERE oneself_username = '#{oneself_username}'")
   end
-  puts "Sync complete for #{username}"
+  logger.info("Sync complete")
 
 rescue => e
-  puts "Some error for: #{oneself_username}. Error: #{e}"
+  logger.info("Error occurred, #{e}")
   throw e
 end
