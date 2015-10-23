@@ -57,7 +57,7 @@ class RescueTimeHelper
       end
     end
 
-    logger.info("finished transforming #{oneself_events.count} events")
+    logger.debug("finished transforming #{oneself_events.count} events")
     return oneself_events, latest_id
   end
 end

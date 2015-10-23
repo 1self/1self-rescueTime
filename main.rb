@@ -90,7 +90,7 @@ get '/oauthredirect' do
     token = rt_helper.get_auth_token(code)
 
     userLogger.info("auth code swapped for token")
-    userLogger.debug("token is #{token[0, 2]}")
+    userLogger.debug("token is #{token.token[0, 2]}")
 
     conn = PG::Connection.open(dbname: Defaults::RESCUE_TIME_DB_NAME,
                               host: Defaults::RESCUE_TIME_DB_HOST,
@@ -103,7 +103,7 @@ get '/oauthredirect' do
     stream = Oneself::Stream.register(oneself_username,
                                       session['registrationToken'],
                                       oneself_username, #no uniq field from rescuetime available :(,
-                                      userLogger
+                                      logger
                                       )
     userLogger.info('stream registered')
 #    userLogger.info(stream)
@@ -147,12 +147,13 @@ def start_sync(oneself_username, stream, logger)
 
   rescue_time_events, new_last_id = rt_helper.get_events(last_id, logger)
 
-  logger.debug("events retrieved, time of last event from api is #{new_last_id}")
-  logger.debug("rescue_time_events is #{rescue_time_events}")
-
   if rescue_time_events == nil
     rescue_time_events = []
   end
+
+  logger.debug("events retrieved, time of last event from api is #{new_last_id}")
+  logger.info("there are #{rescue_time_events.length} events to send to 1self")
+  logger.debug("rescue_time_events is #{rescue_time_events}")
     
   logger.debug("adding the complete event")
   all_events = rescue_time_events + Oneself::Event.sync("complete")
@@ -162,7 +163,7 @@ def start_sync(oneself_username, stream, logger)
   if new_last_id != nil
     result = conn.exec("UPDATE USERS SET LAST_SYNC_ID = #{new_last_id} WHERE oneself_username = '#{oneself_username}'")
   end
-  logger.info("Sync complete")
+  logger.debug("finished updating the database")
 
 rescue => e
   logger.info("Error occurred, #{e}")

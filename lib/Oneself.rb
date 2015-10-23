@@ -120,6 +120,10 @@ module Oneself
     end
 
     def send_via_api(events, stream, logger)
+      if events.length == 0
+        logger.info("there are no events to send to 1self")
+      end
+
       logger.debug("sending events to 1self")
 
       url = Defaults::ONESELF_API_HOST + 
@@ -134,7 +138,7 @@ module Oneself
         parsed_resp = JSON.parse(resp)
       end
       logger.debug("sent events response: #{parsed_resp}")
-      logger.info("events sent")
+      logger.info("#{events.length} events sent to 1self (includes one sync complete)")
 
       parsed_resp
     end
