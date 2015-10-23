@@ -22,18 +22,21 @@ class RescueTimeHelper
     @client.set_token(access_token)
   end
   
-  def get_events(from_id)
-    @@logger.info('getting events')
+  def get_events(from_id, logger)
+    logger.debug('getting events')
     rescuetime_events = @client.fetch_daily_summary_feed
+    logger.info("events received from api")
 
-    @@logger.info 'transforming events, '
-    @@logger.info rescuetime_events.inspect;
-    transform_to_oneself_events(rescuetime_events, from_id)
+    logger.debug("transforming events, ")
+    logger.debug(rescuetime_events.inspect);
+    result = transform_to_oneself_events(rescuetime_events, from_id, logger)
+    logger.info("transformed events")
+    result
   end
 
   private
   
-  def transform_to_oneself_events(rescuetime_events, from_id)
+  def transform_to_oneself_events(rescuetime_events, from_id, logger)
     if rescuetime_events == []
       return []
     end
@@ -41,19 +44,20 @@ class RescueTimeHelper
     oneself_events = []
     latest_id = rescuetime_events.first["id"]
 
-    @@logger.info 'going through events'
-    @@logger.info rescuetime_events.inspect
+    logger.debug 'going through events'
     rescuetime_events.each do |evt|
-      @@logger.info 'processing event'
-      @@logger.info evt
-      if from_id.to_i == evt["id"]
+      logger.debug("processing event")
+      logger.debug("event to be transformed is #{evt}")
+      if from_id.to_i == evt["id"] # the first event return will include the final event from the last sync
+        logger.debug("skipped event")
         break
       else
+        logger.debug("added event")
         oneself_events.push(Oneself::Event.transform_rescuetime_event(evt))
       end
     end
 
-    puts "Finished transforming #{oneself_events.count} events, returning."
+    logger.info("finished transforming #{oneself_events.count} events")
     return oneself_events, latest_id
   end
 end

@@ -89,6 +89,9 @@ get '/oauthredirect' do
     rt_helper = RescueTimeHelper.new
     token = rt_helper.get_auth_token(code)
 
+    userLogger.info("auth code swapped for token")
+    userLogger.debug("token is #{token[0, 2]}")
+
     conn = PG::Connection.open(dbname: Defaults::RESCUE_TIME_DB_NAME,
                               host: Defaults::RESCUE_TIME_DB_HOST,
                               port: Defaults::RESCUE_TIME_DB_PORT.to_i,
@@ -99,7 +102,8 @@ get '/oauthredirect' do
     userLogger.debug("registrationToken is #{session['registrationToken'][0, 2]}")
     stream = Oneself::Stream.register(oneself_username,
                                       session['registrationToken'],
-                                      oneself_username #no uniq field from rescuetime available :(
+                                      oneself_username, #no uniq field from rescuetime available :(,
+                                      userLogger
                                       )
     userLogger.info('stream registered')
 #    userLogger.info(stream)
@@ -117,7 +121,7 @@ end
 def start_sync(oneself_username, stream, logger)
   sync_start_event = Oneself::Event.sync("start")
   logger.debug("sending sync start event #{sync_start_event}")
-  Oneself::Event.send_via_api(sync_start_event, stream)
+  Oneself::Event.send_via_api(sync_start_event, stream, logger)
   logger.info("Sent sync start event successfully")
 
 
@@ -141,7 +145,7 @@ def start_sync(oneself_username, stream, logger)
   rt_helper = RescueTimeHelper.new
   rt_helper.set_token(access_token)
 
-  rescue_time_events, new_last_id = rt_helper.get_events(last_id)
+  rescue_time_events, new_last_id = rt_helper.get_events(last_id, logger)
 
   logger.debug("events retrieved, time of last event from api is #{new_last_id}")
   logger.debug("rescue_time_events is #{rescue_time_events}")
@@ -154,7 +158,7 @@ def start_sync(oneself_username, stream, logger)
   all_events = rescue_time_events + Oneself::Event.sync("complete")
     
   logger.debug("sending the events to the api")
-  Oneself::Event.send_via_api(all_events, stream)
+  Oneself::Event.send_via_api(all_events, stream, logger)
   if new_last_id != nil
     result = conn.exec("UPDATE USERS SET LAST_SYNC_ID = #{new_last_id} WHERE oneself_username = '#{oneself_username}'")
   end

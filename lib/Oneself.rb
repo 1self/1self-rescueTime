@@ -2,18 +2,15 @@ require 'rest-client'
 require 'time'
 require_relative 'util'
 
-
-
 module Oneself
 
   module Stream
     extend self
 
-    @@logger = Logger.new(STDOUT)
-
-    def register(username, reg_token, oneself_uniq_name)
+    def register(username, reg_token, oneself_uniq_name, logger)
+      logger.debug('rgistering stream')
       callback_url = Defaults::HOST_URL + Defaults::SYNC_ENDPOINT + "?oneself_user=#{oneself_uniq_name}&streamid={{streamid}}"
-      @@logger.info('callback_url: ' + callback_url)
+      logger.debug('callback_url: ' + callback_url)
       app_id = Defaults::ONESELF_APP_ID
       app_secret = Defaults::ONESELF_APP_SECRET
 
@@ -26,10 +23,10 @@ module Oneself
       stream_register_url = Defaults::ONESELF_API_HOST + 
         sprintf(Defaults::ONESELF_STREAM_REGISTER_ENDPOINT, username)
 
-      @@logger.info('stream_register_url: ' + stream_register_url)
-      @@logger.info('reg_token: ' + reg_token)
-      @@logger.info('appid: ' + app_id)
-      @@logger.info('app_secret: ' + app_secret)
+      logger.debug('stream_register_url: ' + stream_register_url)
+      logger.debug('reg_token: ' + reg_token[0, 2])
+      logger.debug('appid: ' + app_id)
+      logger.debug('app_secret: ' + app_secret[0, 2])
 
       resp = RestClient::Request.execute(
                                          method: :post,
@@ -39,16 +36,14 @@ module Oneself
                                          accept: :json
                                          )
 
-      puts "Successfully registered stream for #{username}"
-      @@logger.info(resp)
+      logger.info("Registered stream for #{username}")
+      logger.debug(resp)
       JSON.parse(resp)
     end
   end
 
   module Event
     extend self
-
-    @@logger = Logger.new(STDOUT)
 
     def transform_rescuetime_event(evt)
       date = Date.parse(evt["date"]).to_s
@@ -124,23 +119,22 @@ module Oneself
       ]
     end
 
-    def send_via_api(events, stream)
-      puts "Sending events to 1self"
+    def send_via_api(events, stream, logger)
+      logger.debug("sending events to 1self")
 
       url = Defaults::ONESELF_API_HOST + 
         sprintf(Defaults::ONESELF_SEND_EVENTS_ENDPOINT, stream["streamid"])
 
-      puts stream
-      puts url
-
-      @@logger.info(events.to_json)
+      logger.debug("stream is #{stream}, url is #{url}")
+      logger.debug("events are #{events.to_json}")
 
       resp = RestClient.post(url, events.to_json, accept: :json, content_type: :json, Authorization: stream["writeToken"])
       
       if resp != ''
         parsed_resp = JSON.parse(resp)
       end
-      puts "Response after sending events: #{parsed_resp}"
+      logger.debug("sent events response: #{parsed_resp}")
+      logger.info("events sent")
 
       parsed_resp
     end
