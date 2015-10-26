@@ -133,7 +133,7 @@ def start_sync(oneself_username, stream, logger)
                               password: Defaults::RESCUE_TIME_DB_PASSWORD)
 
 
-  result = conn.exec("SELECT * FROM USERS WHERE oneself_username = '#{oneself_username}'")
+  result = conn.exec_params("SELECT * FROM USERS WHERE oneself_username = $1", [oneself_username])
   
   access_token = result[0]["access_token"]
   username = result[0]["oneself_username"]
@@ -161,7 +161,7 @@ def start_sync(oneself_username, stream, logger)
   logger.debug("sending the events to the api")
   Oneself::Event.send_via_api(all_events, stream, logger)
   if new_last_id != nil
-    result = conn.exec("UPDATE USERS SET LAST_SYNC_ID = #{new_last_id} WHERE oneself_username = '#{oneself_username}'")
+    result = conn.exec_params("UPDATE USERS SET LAST_SYNC_ID = $1 WHERE oneself_username = $2", [new_last_id, oneself_username])
   end
   logger.debug("finished updating the database")
 
