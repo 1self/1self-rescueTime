@@ -29,9 +29,9 @@ class RescueTimeHelper
 
     logger.debug("transforming events, ")
     logger.debug(rescuetime_events.inspect);
-    result = transform_to_oneself_events(rescuetime_events, from_id, logger)
+    events, latest_id = transform_to_oneself_events(rescuetime_events, from_id, logger)
     logger.info("transformed events")
-    result
+    return events, latest_id
   end
 
   private
