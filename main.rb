@@ -39,7 +39,9 @@ get '/login' do
 
   scopes = ["time_data","category_data","productivity_data","alert_data","highlight_data"]
 
-  rt_helper = RescueTimeHelper.new
+  rt_helper = RescueTimeHelper.new(Defaults::RESCUE_TIME_CLIENT_ID, 
+                                     Defaults::RESCUE_TIME_CLIENT_SECRET, 
+                                     Defaults::RESCUE_TIME_CALLBACK_URL)
   auth_url = rt_helper.get_auth_url(scopes)
 
   usernameLogger.debug("Authing on #{auth_url}")
@@ -86,7 +88,9 @@ get '/oauthredirect' do
 
     userLogger.debug("received auth code #{code}")
 
-    rt_helper = RescueTimeHelper.new
+    rt_helper = RescueTimeHelper.new(Defaults::RESCUE_TIME_CLIENT_ID, 
+                                     Defaults::RESCUE_TIME_CLIENT_SECRET, 
+                                     Defaults::RESCUE_TIME_CALLBACK_URL)
     token = rt_helper.get_auth_token(code)
 
     userLogger.info("auth code swapped for token")
@@ -142,7 +146,9 @@ def start_sync(oneself_username, stream, logger)
   logger.debug("access_token is #{access_token[0, 2]}, username is #{username[0, 2]}, last_id is #{last_id}")
 
   logger.debug("fectching events")
-  rt_helper = RescueTimeHelper.new
+  rt_helper = RescueTimeHelper.new(Defaults::RESCUE_TIME_CLIENT_ID, 
+                                     Defaults::RESCUE_TIME_CLIENT_SECRET, 
+                                     Defaults::RESCUE_TIME_CALLBACK_URL)
   rt_helper.set_token(access_token)
 
   rescue_time_events, new_last_id = rt_helper.get_events(last_id, logger)

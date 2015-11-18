@@ -1,13 +1,12 @@
 require 'rescue_time_client'
+require_relative 'Oneself'
 logger = Logger.new(STDOUT)
 
 class RescueTimeHelper
   @@logger = Logger.new(STDOUT)
 
-  def initialize
-    @client = RescueTime::Client.new(Defaults::RESCUE_TIME_CLIENT_ID, 
-                                     Defaults::RESCUE_TIME_CLIENT_SECRET, 
-                                     Defaults::RESCUE_TIME_CALLBACK_URL)
+  def initialize(client_id, client_secret, callback_url)
+    @client = RescueTime::Client.new(client_id, client_secret, callback_url)
   end
 
   def get_auth_url(scopes)
@@ -33,8 +32,6 @@ class RescueTimeHelper
     logger.info("transformed events")
     return events, latest_id
   end
-
-  private
   
   def transform_to_oneself_events(rescuetime_events, from_id, logger)
     if rescuetime_events == []
@@ -44,12 +41,18 @@ class RescueTimeHelper
     oneself_events = []
     latest_id = rescuetime_events.first["id"]
 
-    logger.debug 'going through events'
+    logger.debug 'going through events, count' + rescuetime_events.length.to_s
+
     rescuetime_events.each do |evt|
       logger.debug("processing event")
       logger.debug("event to be transformed is #{evt}")
       if from_id.to_i == evt["id"] # the first event return will include the final event from the last sync
         logger.debug("skipped event")
+        break
+      elsif from_id.to_i > evt["id"]
+        logger.warn("stopping transforming events because there is missing data in the rescue time source data")
+        oneself_events = []
+        latest_id = from_id.to_i
         break
       else
         logger.debug("added event")
